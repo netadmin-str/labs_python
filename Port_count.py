@@ -25,8 +25,7 @@ def send_show(device_dict, commands):
         ssh.enable()
         interface_count = 0
         for command in commands:
-            output = ssh.send_command(command)
-            output_parsed = parse_output(platform="cisco_ios", command="show ip interface brief", data=output)
+            output_parsed = ssh.send_command(command, use_textfsm=True)
             for element in output_parsed:
                 if element['status'] == 'administratively down':
                     show_int = ssh.send_command("sh int " + element['intf'])

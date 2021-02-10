@@ -23,8 +23,7 @@ def send_show(device_dict, commands):
     with ConnectHandler(**device_dict) as ssh:
         ssh.enable()
         for command in commands:
-            output = ssh.send_command(command)
-            output_parsed = parse_output(platform="cisco_ios", command="show cdp neighbors", data=output)
+            output_parsed = ssh.send_command(command, use_textfsm=True)
 
             for element in output_parsed:
                 device_id = element['neighbor'].split('.')
@@ -47,12 +46,12 @@ if __name__ == "__main__":
         devices, commands="show cdp neighbors", max_threads=16
     )
 
-   # print(all_done)
     file = open('description_from_cdp_result.csv', 'w')
 
     for key, value in all_done.items():
         for key_int, value_desc in value.items():
             line = str(key)+';'+key_int+';'+value_desc
+            print(line)
             file.write(line + '\n')
 
     file.close()
