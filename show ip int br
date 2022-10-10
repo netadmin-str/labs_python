@@ -1,0 +1,47 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from netmiko import ConnectHandler
+import yaml
+from ntc_templates.parse import parse_output
+import json
+import datetime
+
+def send_command_to_devices(devices, commands, max_threads=2):
+    data = {}
+    with ThreadPoolExecutor(max_workers=max_threads) as executor:
+        future_ssh = [
+            executor.submit(send_show, device, commands) for device in devices
+        ]
+        for f in as_completed(future_ssh):
+            result = f.result()
+            data.update(result)
+    return data
+
+
+def send_show(device_dict, commands):
+    if type(commands) == str:
+        commands = [commands]
+    ip = device_dict["ip"]
+    with ConnectHandler(**device_dict) as ssh:
+        ssh.enable()
+        for command in commands:
+            output = ssh.send_command(command, use_textfsm=True)
+    return {ip: output}
+
+
+if __name__ == "__main__":
+    filename = "devices_all.yaml"
+
+    with open(filename) as f:
+        devices = yaml.safe_load(f)
+    print("Количество устройств:", len(devices))
+
+    all_done = send_command_to_devices(
+        devices, commands="show ip int br", max_threads=16
+    )
+
+    print(all_done)
+    
+    filename = datetime.datetime.now()
+    file = open("S2_sh_ip_route-" + filename.strftime("-%d-%B-%H-%M-%Y"), "w")
+    file.write(json.dumps(all_done, indent=2))
+    file.close()
